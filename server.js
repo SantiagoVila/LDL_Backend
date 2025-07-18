@@ -43,6 +43,7 @@ app.use(limiter);
 // ✅ 3. Creamos la configuración de CORS para Express
 const corsOptions = {
   origin: function (origin, callback) {
+    // Permite peticiones sin origen (como Postman) o si el origen está en nuestra lista
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -84,6 +85,10 @@ app.set('activeUsers', activeUsers);
 // ===================================================================
 // --- Rutas de la Aplicación ---
 // ===================================================================
+app.get("/", (req, res) => {
+    res.send("Servidor funcionando correctamente");
+});
+
 const usuariosRoutes = require('./src/routes/usuarios.routes');
 app.use('/api/usuarios', usuariosRoutes);
 const authRoutes = require('./src/routes/auth.routes');
