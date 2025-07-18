@@ -85,6 +85,10 @@ app.set('activeUsers', activeUsers);
 // ===================================================================
 // --- Rutas de la Aplicación ---
 // ===================================================================
+app.get("/", (req, res) => {
+    res.send("Servidor funcionando correctamente");
+});
+
 const usuariosRoutes = require('./src/routes/usuarios.routes');
 app.use('/api/usuarios', usuariosRoutes);
 const authRoutes = require('./src/routes/auth.routes');
