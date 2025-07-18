@@ -11,11 +11,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 
+// ✅ 1. Definimos TODOS los orígenes permitidos
 const allowedOrigins = [
-    'http://localhost:5173',
-    'https://ldl-frontend-amzb.vercel.app'
+    'http://localhost:5173',              // Para tu desarrollo local
+    'https://ldl-frontend-amzb.vercel.app'  // Tu frontend desplegado en Vercel
 ];
 
+// 2. Creamos la instancia de Socket.IO con la nueva configuración de CORS
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
@@ -24,6 +26,10 @@ const io = new Server(server, {
 });
 
 const logger = require('./src/config/logger'); 
+
+// ===================================================================
+// --- Middleware Esencial ---
+// ===================================================================
 
 app.use(helmet());
 const limiter = rateLimit({
@@ -34,6 +40,7 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// ✅ 3. Creamos la configuración de CORS para Express
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
@@ -44,11 +51,15 @@ const corsOptions = {
   },
   optionsSuccessStatus: 200
 };
-app.use(cors(corsOptions));
+app.use(cors(corsOptions)); // Usamos la nueva configuración
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+
+// ===================================================================
+// --- Lógica de Socket.IO ---
+// ===================================================================
 const activeUsers = new Map();
 io.on('connection', (socket) => {
   logger.info(`Usuario conectado: ${socket.id}`);
@@ -69,7 +80,10 @@ io.on('connection', (socket) => {
 app.set('socketio', io);
 app.set('activeUsers', activeUsers);
 
+
+// ===================================================================
 // --- Rutas de la Aplicación ---
+// ===================================================================
 const usuariosRoutes = require('./src/routes/usuarios.routes');
 app.use('/api/usuarios', usuariosRoutes);
 const authRoutes = require('./src/routes/auth.routes');
@@ -99,7 +113,10 @@ app.use('/api/stats', statsRoutes);
 const logRoutes = require('./src/routes/log.routes');
 app.use('/api/logs', logRoutes);
 
+
+// ===================================================================
 // --- Manejo de Errores y Arranque del Servidor ---
+// ===================================================================
 app.use((req, res, next) => {
     res.status(404).json({ error: 'Ruta no encontrada' });
 });
@@ -109,7 +126,6 @@ app.use((err, req, res, next) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
-  // ✅ CORRECCIÓN FINAL: Especificamos el host '0.0.0.0' para ser compatible con Render
   server.listen(PORT, '0.0.0.0', () => {
     logger.info(`Servidor backend corriendo en el puerto ${PORT}`);
   });
