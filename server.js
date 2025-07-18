@@ -14,7 +14,7 @@ const server = http.createServer(app);
 // ✅ 1. Definimos TODOS los orígenes permitidos
 const allowedOrigins = [
     'http://localhost:5173',              // Para tu desarrollo local
-    'https://ldl-frontend-amzb.vercel.app'  // Tu frontend desplegado en Vercel
+'https://ldl-frontend.vercel.app'
 ];
 
 // 2. Creamos la instancia de Socket.IO con la nueva configuración de CORS
