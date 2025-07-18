@@ -40,19 +40,22 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// ✅ 3. Creamos la configuración de CORS para Express
+// ✅ Corrección: Agregar la lista de métodos permitidos
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permite peticiones sin origen (como Postman) o si el origen está en nuestra lista
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
   },
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"], // <--- AGREGÁ ESTA LÍNEA
+  credentials: true, // <--- Es buena práctica agregar esto también
   optionsSuccessStatus: 200
 };
-app.use(cors(corsOptions)); // Usamos la nueva configuración
+
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
