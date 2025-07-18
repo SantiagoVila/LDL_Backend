@@ -11,11 +11,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://ldl-frontend.vercel.app'
-];
+const logger = require('./src/config/logger');
 
+// ===================================================================
+// --- Configuración CORS para Express ---
+// ===================================================================
 app.use(cors({
   origin: function (origin, callback) {
     if (
@@ -34,53 +34,44 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// 2. Creamos la instancia de Socket.IO con la nueva configuración de CORS
-const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"]
-  }
-});
-
-const logger = require('./src/config/logger'); 
-
 // ===================================================================
-// --- Middleware Esencial ---
+// --- Seguridad y limitadores ---
 // ===================================================================
-
 app.use(helmet());
+
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 200,
-    standardHeaders: true,
-    legacyHeaders: false,
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use(limiter);
-
-// ✅ Corrección: Agregar la lista de métodos permitidos
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"], // <--- AGREGÁ ESTA LÍNEA
-  credentials: true, // <--- Es buena práctica agregar esto también
-  optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ===================================================================
+// --- Configuración de Socket.IO con CORS ---
+// ===================================================================
+const io = new Server(server, {
+  cors: {
+    origin: function (origin, callback) {
+      if (
+        !origin ||
+        origin.startsWith('http://localhost:5173') ||
+        origin.endsWith('.vercel.app')
+      ) {
+        callback(null, true);
+      } else {
+        console.error(`❌ Blocked by Socket.IO CORS: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
-// ===================================================================
-// --- Lógica de Socket.IO ---
-// ===================================================================
 const activeUsers = new Map();
 io.on('connection', (socket) => {
   logger.info(`Usuario conectado: ${socket.id}`);
@@ -101,53 +92,38 @@ io.on('connection', (socket) => {
 app.set('socketio', io);
 app.set('activeUsers', activeUsers);
 
-
 // ===================================================================
 // --- Rutas de la Aplicación ---
 // ===================================================================
 app.get("/", (req, res) => {
-    res.send("Servidor funcionando correctamente");
+  res.send("Servidor funcionando correctamente");
 });
 
-const usuariosRoutes = require('./src/routes/usuarios.routes');
-app.use('/api/usuarios', usuariosRoutes);
-const authRoutes = require('./src/routes/auth.routes');
-app.use('/api/auth', authRoutes);
-const equiposRoutes = require('./src/routes/equipos.routes');
-app.use('/api/equipos', equiposRoutes);
-const mercadoRoutes = require('./src/routes/mercado.routes');
-app.use('/api/mercado', mercadoRoutes);
-const transferenciasRoutes = require('./src/routes/transferencias.routes');
-app.use('/api/transferencias', transferenciasRoutes);
-const jugadoresRoutes = require("./src/routes/jugadores.routes")
-app.use('/api/jugadores', jugadoresRoutes);
-const ligasRoutes = require('./src/routes/ligas.routes');
-app.use('/api/ligas', ligasRoutes);
-const partidosRoutes = require('./src/routes/partidos.routes');
-app.use('/api/partidos', partidosRoutes);
-const notificacionesRoutes = require('./src/routes/notificaciones.routes');
-app.use('/api/notificaciones', notificacionesRoutes);
-const noticiasRoutes = require('./src/routes/noticias.routes');
-app.use('/api/noticias', noticiasRoutes);
-const adminRoutes = require('./src/routes/admin.routes');
-app.use('/api/admin', adminRoutes);
-const reportesRoutes = require('./src/routes/reportes.routes');
-app.use('/api/reportes', reportesRoutes);
-const statsRoutes = require('./src/routes/stats.routes');
-app.use('/api/stats', statsRoutes);
-const logRoutes = require('./src/routes/log.routes');
-app.use('/api/logs', logRoutes);
-
+app.use('/api/usuarios', require('./src/routes/usuarios.routes'));
+app.use('/api/auth', require('./src/routes/auth.routes'));
+app.use('/api/equipos', require('./src/routes/equipos.routes'));
+app.use('/api/mercado', require('./src/routes/mercado.routes'));
+app.use('/api/transferencias', require('./src/routes/transferencias.routes'));
+app.use('/api/jugadores', require('./src/routes/jugadores.routes'));
+app.use('/api/ligas', require('./src/routes/ligas.routes'));
+app.use('/api/partidos', require('./src/routes/partidos.routes'));
+app.use('/api/notificaciones', require('./src/routes/notificaciones.routes'));
+app.use('/api/noticias', require('./src/routes/noticias.routes'));
+app.use('/api/admin', require('./src/routes/admin.routes'));
+app.use('/api/reportes', require('./src/routes/reportes.routes'));
+app.use('/api/stats', require('./src/routes/stats.routes'));
+app.use('/api/logs', require('./src/routes/log.routes'));
 
 // ===================================================================
 // --- Manejo de Errores y Arranque del Servidor ---
 // ===================================================================
 app.use((req, res, next) => {
-    res.status(404).json({ error: 'Ruta no encontrada' });
+  res.status(404).json({ error: 'Ruta no encontrada' });
 });
+
 app.use((err, req, res, next) => {
-    logger.error(err.stack);
-    res.status(500).json({ error: 'Ocurrió un error en el servidor' });
+  logger.error(err.stack);
+  res.status(500).json({ error: 'Ocurrió un error en el servidor' });
 });
 
 if (process.env.NODE_ENV !== 'test') {
