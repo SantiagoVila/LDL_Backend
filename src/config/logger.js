@@ -1,4 +1,3 @@
-// src/config/logger.js
 const winston = require('winston');
 
 const logger = winston.createLogger({
@@ -10,18 +9,20 @@ const logger = winston.createLogger({
         winston.format.json()
     ),
     transports: [
-        new winston.transports.File({ filename: 'error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'combined.log' })
+        // Siempre mostramos los logs en la consola
+        new winston.transports.Console({
+            format: winston.format.combine(
+                winston.format.colorize(),
+                winston.format.simple()
+            )
+        })
     ]
 });
 
+// ✅ CORRECCIÓN: Solo intentamos escribir en archivos si NO estamos en producción
 if (process.env.NODE_ENV !== 'production') {
-    logger.add(new winston.transports.Console({
-        format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple()
-        )
-    }));
+    logger.add(new winston.transports.File({ filename: 'error.log', level: 'error' }));
+    logger.add(new winston.transports.File({ filename: 'combined.log' }));
 }
 
 module.exports = logger;
