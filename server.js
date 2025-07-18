@@ -11,11 +11,24 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 
-// ✅ 1. Definimos TODOS los orígenes permitidos
 const allowedOrigins = [
-    'http://localhost:5173',              // Para tu desarrollo local
-'https://ldl-frontend.vercel.app'
+  'http://localhost:5173',
+  'https://ldl-frontend.vercel.app'
 ];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.some(o => origin === o)) {  // << Cambiá esto
+      callback(null, true);
+    } else {
+      console.error(`❌ Blocked by CORS: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
 
 // 2. Creamos la instancia de Socket.IO con la nueva configuración de CORS
 const io = new Server(server, {
